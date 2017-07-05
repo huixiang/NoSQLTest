@@ -24,7 +24,6 @@ import com.yt.util.StringGenerateUitil;
  * @version 1.0
  */
 public class RedisResponseTimeTest {
-	@Autowired
 	private  UserDao userDao;
 	private int  counter;
 	private   int  dalcounter;
@@ -58,8 +57,14 @@ public class RedisResponseTimeTest {
 	public static void main(String[] args) {
 		RedisResponseTimeTest redisTest = new RedisResponseTimeTest();
 		context = new ClassPathXmlApplicationContext("classpath:redis-config.xml");
-		redisTest.setUserDao((UserDao) context.getBean("userDao"));
-		redisTest.testAddUser();
+		redisTest.setUserDao((UserDao) context.getBean("responseTimeDao"));
+		if("read".equalsIgnoreCase(redisTest.userDao.getTestMethod()))
+			redisTest.testGetUser();
+		else if("write".equalsIgnoreCase(redisTest.userDao.getTestMethod()))
+			redisTest.testAddUser();
+		else
+			System.out.println("请输入有效测试方法,read or test!");
+
 		System.exit(1);
 	}
 	
@@ -78,22 +83,16 @@ public class RedisResponseTimeTest {
 			}
 		}
 
-		try {
-				executorService.shutdown();
-				executorService.awaitTermination(200, TimeUnit.SECONDS);
-				while(!executorService.isTerminated()){
-						if(System.currentTimeMillis() - dalTime >= 1000){
-							System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
-									+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
-							dalTime = System.currentTimeMillis();
-							dalcounter = counter;
-						}
-						Thread.yield();
-				}	
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		executorService.shutdown();
+		while(!executorService.isTerminated()){
+				if(System.currentTimeMillis() - dalTime >= 1000){
+					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
+							+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
+					dalTime = System.currentTimeMillis();
+					dalcounter = counter;
+				}
+				Thread.yield();
+		}
 	
 		double totalTime = (System.currentTimeMillis()-time)/1000.0;	
 		System.out.println("结束时间:  " + simpleDateFormat.format(new Date(System.currentTimeMillis())));
@@ -121,21 +120,16 @@ public class RedisResponseTimeTest {
 			executorService.execute(new UserGet(userDao,random.nextInt(userDao.getWriteTimes())));
 		}
 
-		try {
-				executorService.shutdown();
-				executorService.awaitTermination(100, TimeUnit.SECONDS);
-				while(!executorService.isTerminated()){
-						if(System.currentTimeMillis() - dalTime >= 1000){
-							System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
-									+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
-							dalTime = System.currentTimeMillis();
-							dalcounter = counter;
-						}
-						Thread.yield();;
-				}	
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+		executorService.shutdown();
+		while(!executorService.isTerminated()){
+				if(System.currentTimeMillis() - dalTime >= 1000){
+					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
+							+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
+					dalTime = System.currentTimeMillis();
+					dalcounter = counter;
+				}
+				Thread.yield();;
+		}
 	
 		double totalTime = (System.currentTimeMillis()-time)/1000.0;	
 		System.out.println("结束时间:  " + simpleDateFormat.format(new Date(System.currentTimeMillis())));
@@ -170,8 +164,8 @@ public class RedisResponseTimeTest {
 		public void run() {
 			
 			User user = new User();
-			user.setId("user" + i);
-			user.setName(StringGenerateUitil.generateString(100));
+			user.setId("k" + i);
+			user.setName(StringGenerateUitil.generateString(userDao.getTestDataSize()));
 			startTime = System.nanoTime();
 			if(time == 0)
 				time = System.currentTimeMillis();
@@ -218,7 +212,7 @@ public class RedisResponseTimeTest {
 			startTime = System.nanoTime();
 			if(time == 0)
 				time = System.currentTimeMillis();
-			userDao.get("user" + i);
+			userDao.get("k" + i);
 			incrCounter();
 			totalTim = totalTim +  System.nanoTime() - startTime;
 			if(System.nanoTime() - startTime<= 1*1000000)

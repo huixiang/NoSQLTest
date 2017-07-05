@@ -24,7 +24,6 @@ import com.yt.util.StringGenerateUitil;
  * @version 1.0
  */
 public class RedisOPSTest {
-	@Autowired
 	private  UserDao userDao;
 	private int  counter;
 	private   int  dalcounter;
@@ -32,8 +31,6 @@ public class RedisOPSTest {
 	static long dalTime;
 	static int poke;
 	static Random random = new Random(System.currentTimeMillis()%1000);
-//	static String FORMAT_PATTERN="yyyyMMddHHmmss";
-//	private static final SimpleDateFormat format = new SimpleDateFormat(FORMAT_PATTERN);
 	public  void incrCounter(){
 		synchronized (this) {
 			counter++;
@@ -48,8 +45,13 @@ public class RedisOPSTest {
 	public static void main(String[] args) {
 		RedisOPSTest redisTest = new RedisOPSTest();
 		context = new ClassPathXmlApplicationContext("classpath:redis-config.xml");
-		redisTest.setUserDao((UserDao) context.getBean("userDao"));
-		redisTest.testGetUser();
+		redisTest.setUserDao((UserDao) context.getBean("opsTestDao"));
+		if("read".equalsIgnoreCase(redisTest.userDao.getTestMethod()))
+			redisTest.testGetUser();
+		else if("write".equalsIgnoreCase(redisTest.userDao.getTestMethod()))
+			redisTest.testAddUser();
+		else
+			System.out.println("请输入有效测试方法,read or test!");
 		System.exit(1);
 	}
 	
@@ -59,7 +61,7 @@ public class RedisOPSTest {
 		dalTime = System.currentTimeMillis();
 		ExecutorService executorService = Executors.newFixedThreadPool(userDao.getThreadNumber());
 		for(int i=0;i<userDao.getWriteTimes();i++){
-			executorService.execute(new UserAdd(userDao,10000000 + i));
+			executorService.execute(new UserAdd(userDao,i));
 			if(System.currentTimeMillis() - dalTime >= 2000){
 				System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
 						+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
@@ -68,22 +70,16 @@ public class RedisOPSTest {
 			}
 		}
 
-		try {
-				executorService.shutdown();
-				executorService.awaitTermination(2000, TimeUnit.SECONDS);
-				while(!executorService.isTerminated()){
-						if(System.currentTimeMillis() - dalTime >= 2000){
-							System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
-									+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
-							dalTime = System.currentTimeMillis();
-							dalcounter = counter;
-						}
-						Thread.yield();
-				}	
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		executorService.shutdown();
+		while(!executorService.isTerminated()){
+				if(System.currentTimeMillis() - dalTime >= 2000){
+					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
+							+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
+					dalTime = System.currentTimeMillis();
+					dalcounter = counter;
+				}
+				Thread.yield();
+		}
 	
 		double totalTime = (System.currentTimeMillis()-time)/1000.0;	
 		System.out.println("结束时间:  " + simpleDateFormat.format(new Date(System.currentTimeMillis())));
@@ -98,25 +94,20 @@ public class RedisOPSTest {
 		dalTime = System.currentTimeMillis();
 		ExecutorService executorService = Executors.newFixedThreadPool(userDao.getThreadNumber());
 		for(int i=0;i<userDao.getReadTimes();i++){
-			executorService.execute(new UserGet(userDao,random.nextInt(20000000)));
+			executorService.execute(new UserGet(userDao,random.nextInt(userDao.getWriteTimes())));
 		}
 
-		try {
-				executorService.shutdown();
-				executorService.awaitTermination(1000, TimeUnit.SECONDS);
-				while((counter!=dal || counter==0) && !executorService.isTerminated()){
-						if(System.currentTimeMillis() - dalTime >= 2000){
-							System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
-									+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
-							dalTime = System.currentTimeMillis();
-							dalcounter = counter;
-						}
-						dal = counter;
-						Thread.yield();
-				}	
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+		executorService.shutdown();
+		while(!executorService.isTerminated()){
+				if(System.currentTimeMillis() - dalTime >= 2000){
+					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime)) 
+							+ " OPS:  " + (counter-dalcounter) / ((System.currentTimeMillis()-dalTime)/1000.0));
+					dalTime = System.currentTimeMillis();
+					dalcounter = counter;
+				}
+				dal = counter;
+				Thread.yield();
+		}
 	
 		double totalTime = (System.currentTimeMillis()-time)/1000.0;	
 		System.out.println("结束时间:  " + simpleDateFormat.format(new Date(System.currentTimeMillis())));
@@ -140,10 +131,11 @@ public class RedisOPSTest {
 				time = System.currentTimeMillis();
 			boolean result = false;
 			User user = new User();
-			user.setId("user" + i);
+			user.setId("k" + i);
 			HashMap<byte[],byte[]> map = new HashMap<byte[],byte[]>();
-			map.put("expires".getBytes(), StringGenerateUitil.generateString(90).getBytes());
+			map.put("v".getBytes(), StringGenerateUitil.generateString(userDao.getTestDataSize()).getBytes());
 			user.setHashMap(map);
+			//这里是具体的插入操作，对应不同数据类型写入，jedis提供了不同方法，请酌情选用，注意和查询操作使用的方法对应
 			result = userDao.addHashMap(user);
 			incrCounter();
 			if(!result)
@@ -164,7 +156,8 @@ public class RedisOPSTest {
 			
 			if(time == 0)
 				time = System.currentTimeMillis();
-			userDao.get("user" + i);
+			//注意和写入类型一致
+			userDao.getMap("k" + i);
 			incrCounter();		
 		}
 		

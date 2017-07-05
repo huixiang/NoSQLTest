@@ -91,16 +91,25 @@ public class CouchbaseResponseTimeTest {
 	public void setBucketPassword(String bucketPassword) {
 		this.bucketPassword = bucketPassword;
 	}
-	@Autowired
+	public int getTestDataSize() {
+		return testDataSize;
+	}
+	public void setTestDataSize(int testDataSize) {
+		this.testDataSize = testDataSize;
+	}
+	public String getTestMethod() {
+		return testMethod;
+	}
+	public void setTestMethod(String testMethod) {
+		this.testMethod = testMethod;
+	}
 	int writeTimes;
-	@Autowired
 	int bucketNumber;
-	@Autowired
 	String address;
-	@Autowired
 	String bucketName;
-	@Autowired
 	String bucketPassword;
+	int testDataSize;
+	String testMethod;
 	
 	long totalTim;
 	long oneSecond;
@@ -126,7 +135,12 @@ public class CouchbaseResponseTimeTest {
         	buckets.add(cluster.openBucket(couchbaseTest.bucketName, couchbaseTest.bucketPassword, 130, TimeUnit.SECONDS));
         
 		try {
-			couchbaseTest.testGetUser(couchbaseTest);
+			if("read".equalsIgnoreCase(couchbaseTest.testMethod))
+				couchbaseTest.testGetUser(couchbaseTest);
+			else if("write".equalsIgnoreCase(couchbaseTest.testMethod))
+				couchbaseTest.testAddUser(couchbaseTest);
+			else
+				System.out.println("请输入有效测试方法,read or test!");
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -150,7 +164,6 @@ public class CouchbaseResponseTimeTest {
 			}
 		}	
 		executorService.shutdown();
-		executorService.awaitTermination(100, TimeUnit.SECONDS);
 		while(!executorService.isTerminated()){
 		
 				if(System.currentTimeMillis() - dalTime >= 1000){
@@ -184,7 +197,7 @@ public class CouchbaseResponseTimeTest {
 		time = (long) 0;
 		dalTime = System.currentTimeMillis();
 		
-		ExecutorService executorService = Executors.newFixedThreadPool(1);
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
 		for(int i=0;i<couchbaseTest.readTimes;i++){
 			executorService.execute(new UserGet(buckets.get(index++%bucketNumber),random.nextInt(couchbaseTest.writeTimes)));
 			if(System.currentTimeMillis() - dalTime >= 1000){
@@ -195,7 +208,6 @@ public class CouchbaseResponseTimeTest {
 			}
 		}	
 		executorService.shutdown();
-		executorService.awaitTermination(100, TimeUnit.SECONDS);
 		while((counter!=dal || counter==0) && executorService.isTerminated()){
 			try {
 				if(System.currentTimeMillis() - dalTime >= 1000){
@@ -239,9 +251,9 @@ public class CouchbaseResponseTimeTest {
 		public void run() {
 			
 			User user = new User();
-			user.setId("user" + i);
+			user.setId("k" + i);
 			HashMap<String,String> map = new HashMap<String,String>();
-			map.put("expires", StringGenerateUitil.generateString(9990));
+			map.put("v", StringGenerateUitil.generateString(testDataSize));
 			startTime = System.nanoTime();
 			if(time == 0)
 				time = System.currentTimeMillis();
@@ -287,7 +299,7 @@ public class CouchbaseResponseTimeTest {
 			if(time == 0)
 				time = System.currentTimeMillis();
 			 
-			bucket.get("user"+i, JsonDocument.class);
+			bucket.get("k"+i, JsonDocument.class);
 //			userDao.query(select("name").from("databases").where(x(category).eq(s("NoSQL"))))
 			
 			incrCounter();

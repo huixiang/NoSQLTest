@@ -18,12 +18,12 @@
 
                 
                 <bean class="org.springframework.data.redis.connection.RedisNode">
-                    <constructor-arg name="host" value="192.168."></constructor-arg>
+                    <constructor-arg name="host" value="192.168"></constructor-arg>
                     <constructor-arg name="port" value="7001"></constructor-arg>
                 </bean>
                 
                 <bean class="org.springframework.data.redis.connection.RedisNode">
-                    <constructor-arg name="host" value="192.168."></constructor-arg>
+                    <constructor-arg name="host" value="192.168"></constructor-arg>
                     <constructor-arg name="port" value="7003"></constructor-arg>
                 </bean>
             </set>
@@ -44,13 +44,26 @@
 		<property name="connectionFactory" ref="jeidsConnectionFactory" />
 	</bean>
 	
-	<bean id="userDao" class="com.yt.dao.UserDao">
+	<bean id="opsTestDao" class="com.yt.dao.UserDao">
+		<property name="redisTemplate" ref="redisTemplate"></property>
+		<property name="threadNumber" value="100"></property>
+		<property name="readTimes" value="10000"></property>
+		<property name="writeTimes" value="10000"></property>
+		<!-- 以字节为单位 -->
+  		<property name="testDataSize" value="10"></property>
+  		<!-- read or write -->
+  		<property name="testMethod" value="read"></property>
+	</bean>
+    <bean id="responseTimeDao" class="com.yt.dao.UserDao">
 		<property name="redisTemplate" ref="redisTemplate"></property>
 		<property name="threadNumber" value="1"></property>
 		<property name="readTimes" value="10000"></property>
 		<property name="writeTimes" value="10000"></property>
-	</bean>
-             
+		<!-- 以字节为单位 -->
+  		<property name="testDataSize" value="10"></property>
+  		<!-- read or write -->
+  		<property name="testMethod" value="write"></property>
+	</bean>      
       
 
 </beans>

@@ -22,6 +22,20 @@ public class UserDao extends AbstractBaseRedisDao<String, User> implements IUser
 	private int threadNumber;
 	private int readTimes;
 	private int writeTimes;
+	private int testDataSize;
+	private String testMethod;
+	public int getTestDataSize() {
+		return testDataSize;
+	}
+	public void setTestDataSize(int testDataSize) {
+		this.testDataSize = testDataSize;
+	}
+	public String getTestMethod() {
+		return testMethod;
+	}
+	public void setTestMethod(String testMethod) {
+		this.testMethod = testMethod;
+	}
 	public int getReadTimes() {
 		return readTimes;
 	}

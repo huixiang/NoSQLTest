@@ -91,16 +91,26 @@ public class CouchbaseOPSTest {
 	public void setBucketPassword(String bucketPassword) {
 		this.bucketPassword = bucketPassword;
 	}
-	@Autowired
+	public int getTestDataSize() {
+		return testDataSize;
+	}
+	public void setTestDataSize(int testDataSize) {
+		this.testDataSize = testDataSize;
+	}
+	public String getTestMethod() {
+		return testMethod;
+	}
+	public void setTestMethod(String testMethod) {
+		this.testMethod = testMethod;
+	}
+
 	int writeTimes;
-	@Autowired
 	int bucketNumber;
-	@Autowired
 	String address;
-	@Autowired
 	String bucketName;
-	@Autowired
 	String bucketPassword;
+	int testDataSize;
+	String testMethod;
 	
 	static Random random = new Random(System.currentTimeMillis()%1000);
 	private static ApplicationContext context;    
@@ -115,7 +125,12 @@ public class CouchbaseOPSTest {
         	buckets.add(cluster.openBucket(couchbaseTest.bucketName, couchbaseTest.bucketPassword, 60, TimeUnit.SECONDS));
         
 		try {
-			couchbaseTest.testGetUser(couchbaseTest);
+			if("read".equalsIgnoreCase(couchbaseTest.testMethod))
+				couchbaseTest.testGetUser(couchbaseTest);
+			else if("write".equalsIgnoreCase(couchbaseTest.testMethod))
+				couchbaseTest.testAddUser(couchbaseTest);
+			else
+				System.out.println("请输入有效测试方法,read or test!");
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -166,7 +181,6 @@ public class CouchbaseOPSTest {
 			}
 		}	
 		executorService.shutdown();
-		executorService.awaitTermination(100, TimeUnit.MINUTES);
 		while(!executorService.isTerminated()){
 				if(System.currentTimeMillis() - dalTime >= 1000){
 					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime))
@@ -199,7 +213,6 @@ public class CouchbaseOPSTest {
 			}
 		}	
 		executorService.shutdown();
-		executorService.awaitTermination(1000, TimeUnit.SECONDS);
 		while(!executorService.isTerminated()){
 				if(System.currentTimeMillis() - dalTime >= 1000){
 					System.out.println(simpleDateFormat.format(new Date(System.currentTimeMillis())) + "-" + simpleDateFormat.format(new Date(dalTime))
@@ -225,11 +238,11 @@ public class CouchbaseOPSTest {
 		}
 		public void run() {
 			User user = new User();
-			user.setId("user" + i);
+			user.setId("k" + i);
 			HashMap<String,String> map = new HashMap<String,String>();
-			map.put("expires", StringGenerateUitil.generateString(9990));
+			map.put("v", StringGenerateUitil.generateString(testDataSize));
 			if(time == 0)
-				time = System.currentTimeMillis();
+				time = System.currentTimeMillis();	
 			bucket.upsert(JsonDocument.create(user.getId(), 0, JsonObject.from(map)), 60, TimeUnit.SECONDS);
 			incrCounter();
 
@@ -246,7 +259,7 @@ public class CouchbaseOPSTest {
 		public void run() {	
 			if(time == 0)
 				time = System.currentTimeMillis();
-			bucket.get("user"+i,100,TimeUnit.SECONDS);			
+			bucket.get("k"+i,100,TimeUnit.SECONDS);			
 			incrCounter();
 		}
 		
