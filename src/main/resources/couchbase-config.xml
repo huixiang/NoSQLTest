@@ -22,7 +22,7 @@
   		<property name="testMethod" value="write"></property>
   	</bean>
   	<bean id="couchbaseResponseTime" class="com.yt.couchbase.CouchbaseResponseTimeTest">
-  		<property name="address" value="192.168.73.35"></property>
+  		<property name="address" value="192.168"></property>
   		<property name="bucketName" value="arescloud"></property>
   		<property name="bucketPassword" value="arescloud"></property>
   		<property name="bucketNumber" value="4"></property>
